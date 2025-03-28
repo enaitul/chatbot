@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Teacher Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .panel {
+            width: 48%;
+            padding: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            display: block;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .chatbox {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f1f1f1;
+        }
+        .voice-btn {
+            background-color: #28a745;
+            margin-left: 10px;
+        }
+        .voice-btn:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Panel: Assignment Feedback -->
+        <div class="panel">
+            <h2>📘 AI Teacher Assistant</h2>
+            <label for="assignmentTitle">📄 Assignment Title</label>
+            <input type="text" id="assignmentTitle" placeholder="E.g. 'History Essay on World War II'">
+
+            <label for="fileUpload">📂 Submit Your Work</label>
+            <input type="file" id="fileUpload">
+
+            <p>OR</p>
+
+            <label for="textInput">⌨️ Type Your Answer</label>
+            <textarea id="textInput" placeholder="Write your answer here..."></textarea>
+
+            <button id="getFeedback">📌 Get Feedback</button>
+            <div id="feedbackResult"></div>
+        </div>
+
+        <!-- Right Panel: Chatbot -->
+        <div class="panel">
+            <h2>🤖 AI Chatbot</h2>
+            <div class="chatbox" id="chatbox"></div>
+            <input type="text" id="chatInput" placeholder="Ask me anything...">
+            <button id="sendMessage">Send</button>
+            <button class="voice-btn" id="voiceInput">🎤 Speak</button>
+        </div>
+    </div>
+
+    <script>
+        // Function to send user messages to chatbot
+        async function sendMessage() {
+            const message = document.getElementById("chatInput").value.trim();
+            if (!message) return;
+
+            const chatbox = document.getElementById("chatbox");
+            chatbox.innerHTML += `<p><strong>You:</strong> ${message}</p>`;
+
+            // Send to backend
+            try {
+                const response = await fetch("http://localhost:5000/api/chatbot", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                chatbox.innerHTML += `<p><strong>AI:</strong> ${data.response}</p>`;
+                
+                // Voice output
+                speakResponse(data.response);
+            } catch (error) {
+                chatbox.innerHTML += `<p><strong>AI:</strong> Error: Could not connect to server.</p>`;
+            }
+
+            document.getElementById("chatInput").value = "";
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+
+        document.getElementById("sendMessage").addEventListener("click", sendMessage);
+
+        document.getElementById("chatInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") sendMessage();
+        });
+
+        // Voice Input (Speech-to-Text)
+        document.getElementById("voiceInput").addEventListener("click", function() {
+            let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = "en-US";
+            recognition.start();
+
+            recognition.onresult = function(event) {
+                let transcript = event.results[0][0].transcript;
+                document.getElementById("chatInput").value = transcript;
+                sendMessage();
+            };
+        });
+
+        // Voice Output (Text-to-Speech)
+        function speakResponse(text) {
+            let speech = new SpeechSynthesisUtterance(text);
+            speech.lang = "en-US";
+            window.speechSynthesis.speak(speech);
+        }
+    </script>
+</body>
+</html>
